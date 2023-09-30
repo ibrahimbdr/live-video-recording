@@ -1,8 +1,7 @@
 import React, { useEffect, useRef } from 'react';
-import { IoMdVideocam } from 'react-icons/io';
 import { FaStop } from 'react-icons/fa';
 import { database } from './firebaseConfig';
-import SimplePeer from 'simple-peer'; 
+import SimplePeer from 'simple-peer';
 
 const LiveVideo = () => {
   const videoRef = useRef(null);
@@ -11,41 +10,43 @@ const LiveVideo = () => {
 
   useEffect(() => {
     const initializeWebRTC = async () => {
-      const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
 
-      videoRef.current.srcObject = stream;
-      localStreamRef.current = stream;
+        videoRef.current.srcObject = stream;
+        localStreamRef.current = stream;
 
-      const peer = new SimplePeer({
-        initiator: true,
-        trickle: false,
-        stream,
-      });
+        const peer = new SimplePeer({
+          initiator: true,
+          trickle: false,
+          stream,
+        });
 
-      peer.on('signal', (data) => {
-        // Send the signal data to the Firebase Realtime Database
-        database.ref('signal').set(data);
-      });
+        peer.on('signal', (data) => {
+          // Send the signal data to the Firebase Realtime Database
+          database.ref('signal').set(data);
+        });
 
-      database.ref('signal').on('value', (snapshot) => {
-        const signal = snapshot.val();
+        database.ref('signal').on('value', (snapshot) => {
+          const signal = snapshot.val();
 
-        if (signal && peer) {
-          peer.signal(signal);
-        }
-      });
+          if (signal && peer) {
+            peer.signal(signal);
+          }
+        });
 
-      peer.on('stream', (remoteStream) => {
-        videoRef.current.srcObject = remoteStream;
-      });
+        peer.on('stream', (remoteStream) => {
+          videoRef.current.srcObject = remoteStream;
+        });
 
-      peerRef.current = peer;
+        peerRef.current = peer;
+      } catch (error) {
+        console.error('Error accessing media devices:', error);
+      }
     };
 
     initializeWebRTC();
   }, []);
-
-
 
   return (
     <div className="bg-gray-100 min-h-screen flex flex-col items-center justify-center">
@@ -62,7 +63,6 @@ const LiveVideo = () => {
           />
         </div>
         <div className="mt-4 flex justify-center items-center space-x-4">
-
           <button
             onClick={() => peerRef.current && peerRef.current.destroy()}
             className="bg-red-500 hover:bg-red-600 text-white py-2 px-4 rounded"
